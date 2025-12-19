@@ -1,122 +1,566 @@
+import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
 
 void main() {
-  runApp(const MyApp());
+  SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.dark);
+  runApp(const AppleNoteApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+// ==========================================
+// 1. LE MODÈLE
+// ==========================================
+class Note {
+  int id;
+  String titre;
+  String contenu;
+  DateTime date; // Ajout d'une date pour le réalisme
 
-  // This widget is the root of your application.
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-      ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+  Note({
+    required this.id,
+    required this.titre,
+    required this.contenu,
+    DateTime? date,
+  }) : date = date ?? DateTime.now();
+
+  factory Note.fromJson(Map<String, dynamic> json) {
+    return Note(
+      id: json['id'],
+      titre: json['title'] ?? 'Sans titre',
+      contenu: json['body'] ?? '',
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
+// ==========================================
+// 2. LE SERVICE API
+// ==========================================
+class NoteService {
+  static const String _baseUrl = 'https://jsonplaceholder.typicode.com/posts';
 
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  Future<List<Note>> recupererNotes() async {
+    try {
+      final response = await http.get(Uri.parse(_baseUrl));
+      if (response.statusCode == 200) {
+        List<dynamic> body = jsonDecode(response.body);
+        return body.take(10).map((json) => Note.fromJson(json)).toList();
+      } else {
+        throw Exception('Erreur serveur : ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Erreur de connexion');
+    }
+  }
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+// ==========================================
+// 3. CONFIGURATION DE L'APP
+// ==========================================
+class AppleNoteApp extends StatefulWidget {
+  const AppleNoteApp({super.key});
 
-  void _incrementCounter() {
+  @override
+  State<AppleNoteApp> createState() => _AppleNoteAppState();
+}
+
+class _AppleNoteAppState extends State<AppleNoteApp> {
+  bool _modeSombre = false;
+
+  void _toggleTheme() {
     setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
+      _modeSombre = !_modeSombre;
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-    return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
+    const couleurJaune = Color(0xFFFFCC00);
+    const grisFondClair = Color(0xFFF2F2F7);
+    const grisFondSombre = Color(0xFF000000);
+
+    return MaterialApp(
+      title: 'Notes',
+      debugShowCheckedModeBanner: false,
+      themeMode: _modeSombre ? ThemeMode.dark : ThemeMode.light,
+
+      theme: ThemeData(
+        useMaterial3: true,
+        scaffoldBackgroundColor: grisFondClair,
+        primaryColor: couleurJaune,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: grisFondClair,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          foregroundColor: couleurJaune,
+        ),
       ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
+
+      darkTheme: ThemeData.dark().copyWith(
+        scaffoldBackgroundColor: grisFondSombre,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: grisFondSombre,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          foregroundColor: couleurJaune,
+        ),
+      ),
+
+      home: EcranPrincipal(toggleTheme: _toggleTheme, isDark: _modeSombre),
+    );
+  }
+}
+
+// ==========================================
+// 4. ÉCRAN PRINCIPAL (Liste)
+// ==========================================
+class EcranPrincipal extends StatefulWidget {
+  final VoidCallback toggleTheme;
+  final bool isDark;
+
+  const EcranPrincipal({
+    super.key,
+    required this.toggleTheme,
+    required this.isDark,
+  });
+
+  @override
+  State<EcranPrincipal> createState() => _EcranPrincipalState();
+}
+
+class _EcranPrincipalState extends State<EcranPrincipal> {
+  final NoteService _service = NoteService();
+  List<Note> _notesLocales = [];
+  List<Note> _notesFiltrees = [];
+  bool _chargement = true;
+  bool _erreur = false;
+  final TextEditingController _rechercheCtrl = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _initialiserDonnees();
+    _rechercheCtrl.addListener(_filtrerNotes);
+  }
+
+  void _initialiserDonnees() async {
+    try {
+      final notes = await _service.recupererNotes();
+      setState(() {
+        _notesLocales = notes;
+        _notesFiltrees = List.from(notes);
+        _chargement = false;
+      });
+    } catch (e) {
+      setState(() {
+        _erreur = true;
+        _chargement = false;
+      });
+    }
+  }
+
+  void _filtrerNotes() {
+    final query = _rechercheCtrl.text.toLowerCase();
+    setState(() {
+      _notesFiltrees = _notesLocales.where((note) {
+        return note.titre.toLowerCase().contains(query) ||
+            note.contenu.toLowerCase().contains(query);
+      }).toList();
+    });
+  }
+
+  // --- LOGIQUE CRÉATION / MODIFICATION ---
+  void _ouvrirEditeur({Note? noteExistant}) async {
+    // Si noteExistant est null, c'est une nouvelle note
+    final noteEnCours =
+        noteExistant ??
+        Note(id: Random().nextInt(100000) + 1000, titre: "", contenu: "");
+
+    // On attend le retour de l'écran d'édition (true si Sauvegardé, null si Annulé)
+    final aSauvegarde = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EcranDetail(
+          note: noteEnCours,
+          isDark: widget.isDark,
+          isNew: noteExistant == null, // On précise si c'est nouveau
+        ),
+      ),
+    );
+
+    // Si l'utilisateur a appuyé sur OK
+    if (aSauvegarde == true) {
+      setState(() {
+        if (noteExistant == null) {
+          // C'était une nouvelle note, on l'ajoute
+          _notesLocales.insert(0, noteEnCours);
+        }
+        // Si c'était une modif, l'objet est déjà modifié par référence,
+        // on a juste besoin de rafraichir la liste
+        _filtrerNotes();
+      });
+    }
+  }
+
+  // --- LOGIQUE SUPPRESSION (Corrigée) ---
+  void _supprimerNote(Note note) {
+    final indexBackup = _notesLocales.indexOf(note);
+    setState(() {
+      _notesLocales.removeWhere((n) => n.id == note.id);
+      _filtrerNotes();
+    });
+
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text("Note supprimée"),
+        action: SnackBarAction(
+          label: "Annuler",
+          onPressed: () {
+            setState(() {
+              if (indexBackup >= 0) {
+                _notesLocales.insert(indexBackup, note);
+              } else {
+                _notesLocales.add(note);
+              }
+              _filtrerNotes();
+            });
+          },
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final couleurTexte = widget.isDark ? Colors.white : Colors.black;
+    final couleurFondListe = widget.isDark
+        ? const Color(0xFF1C1C1E)
+        : Colors.white;
+    final couleurRecherche = widget.isDark
+        ? const Color(0xFF1C1C1E)
+        : const Color(0xFFE3E3E8);
+
+    return Scaffold(
+      // Utilisation d'AppBar pour éviter l'erreur "Overflowed"
+      appBar: AppBar(
+        titleSpacing: 0,
+        centerTitle: false,
+        title: Row(
+          children: const [
+            SizedBox(width: 8),
+            Icon(Icons.arrow_back_ios_new, size: 22),
+            SizedBox(width: 5),
+            Text("Dossiers", style: TextStyle(fontSize: 17)),
+          ],
+        ),
+        actions: [
+          IconButton(
+            icon: Icon(
+              widget.isDark ? Icons.light_mode : Icons.dark_mode_outlined,
+            ),
+            onPressed: widget.toggleTheme,
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
+      body: _chargement
+          ? const Center(child: CircularProgressIndicator.adaptive())
+          : _erreur
+          ? Center(
+              child: TextButton(
+                onPressed: _initialiserDonnees,
+                child: const Text("Réessayer"),
+              ),
+            )
+          : Column(
+              children: [
+                // En-tête "Notes" + Recherche
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 5,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Notes",
+                        style: TextStyle(
+                          fontSize: 34,
+                          fontWeight: FontWeight.bold,
+                          color: couleurTexte,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Container(
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: couleurRecherche,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: TextField(
+                          controller: _rechercheCtrl,
+                          decoration: const InputDecoration(
+                            prefixIcon: Icon(Icons.search, color: Colors.grey),
+                            hintText: "Rechercher",
+                            hintStyle: TextStyle(color: Colors.grey),
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.symmetric(vertical: 8),
+                          ),
+                          style: TextStyle(color: couleurTexte),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 10),
+
+                // Liste des notes
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        color: couleurFondListe,
+                        child: ListView.separated(
+                          padding: EdgeInsets.zero,
+                          physics: const BouncingScrollPhysics(),
+                          itemCount: _notesFiltrees.length,
+                          separatorBuilder: (c, i) => Divider(
+                            height: 1,
+                            indent: 16,
+                            color: Colors.grey.withOpacity(0.3),
+                          ),
+                          itemBuilder: (context, index) {
+                            final note = _notesFiltrees[index];
+                            return Dismissible(
+                              key: Key(
+                                note.id.toString(),
+                              ), // Clé unique essentielle
+                              direction: DismissDirection.endToStart,
+                              background: Container(
+                                color: Colors.red,
+                                alignment: Alignment.centerRight,
+                                padding: const EdgeInsets.only(right: 20),
+                                child: const Icon(
+                                  Icons.delete,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              onDismissed: (_) => _supprimerNote(note),
+                              child: ListTile(
+                                onTap: () => _ouvrirEditeur(noteExistant: note),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 8,
+                                ),
+                                title: Text(
+                                  note.titre.isEmpty
+                                      ? "Nouvelle note"
+                                      : note.titre,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                    color: couleurTexte,
+                                  ),
+                                ),
+                                subtitle: Padding(
+                                  padding: const EdgeInsets.only(top: 4.0),
+                                  child: Text(
+                                    "${note.date.hour}:${note.date.minute.toString().padLeft(2, '0')}  ${note.contenu.replaceAll('\n', ' ')}",
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: Colors.grey.shade600,
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Footer
+                Container(
+                  height: 60,
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  color: widget.isDark
+                      ? const Color(0xFF1C1C1E)
+                      : const Color(0xFFF2F2F7),
+                  child: SafeArea(
+                    top: false,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const SizedBox(width: 24),
+                        Text(
+                          "${_notesLocales.length} Notes",
+                          style: TextStyle(fontSize: 12, color: couleurTexte),
+                        ),
+                        IconButton(
+                          icon: const Icon(
+                            Icons.edit_square,
+                            color: Color(0xFFFFCC00),
+                            size: 28,
+                          ),
+                          onPressed: () => _ouvrirEditeur(), // Nouvelle note
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+    );
+  }
+}
+
+// ==========================================
+// 5. ÉCRAN D'ÉDITION (Detail)
+// ==========================================
+class EcranDetail extends StatefulWidget {
+  final Note note;
+  final bool isDark;
+  final bool isNew;
+
+  const EcranDetail({
+    super.key,
+    required this.note,
+    required this.isDark,
+    required this.isNew,
+  });
+
+  @override
+  State<EcranDetail> createState() => _EcranDetailState();
+}
+
+class _EcranDetailState extends State<EcranDetail> {
+  late TextEditingController _titreCtrl;
+  late TextEditingController _contenuCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _titreCtrl = TextEditingController(text: widget.note.titre);
+    _contenuCtrl = TextEditingController(text: widget.note.contenu);
+  }
+
+  void _sauvegarderEtQuitter() {
+    // 1. On met à jour l'objet Note uniquement ici
+    widget.note.titre = _titreCtrl.text;
+    widget.note.contenu = _contenuCtrl.text;
+    widget.note.date = DateTime.now();
+
+    // 2. On renvoie "true" pour dire qu'on a validé
+    Navigator.pop(context, true);
+  }
+
+  @override
+  void dispose() {
+    _titreCtrl.dispose();
+    _contenuCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final couleurFond = widget.isDark ? Colors.black : Colors.white;
+    final couleurTexte = widget.isDark ? Colors.white : Colors.black;
+
+    return Scaffold(
+      backgroundColor: couleurFond,
+      appBar: AppBar(
+        backgroundColor: couleurFond,
+        // Bouton Retour (Annuler)
+        leadingWidth: 100,
+        leading: TextButton.icon(
+          onPressed: () => Navigator.pop(context, false), // false = Annuler
+          icon: const Icon(
+            Icons.arrow_back_ios,
+            size: 20,
+            color: Color(0xFFFFCC00),
+          ),
+          label: const Text(
+            "Notes",
+            style: TextStyle(color: Color(0xFFFFCC00), fontSize: 17),
+          ),
+          style: TextButton.styleFrom(
+            alignment: Alignment.centerLeft,
+            padding: const EdgeInsets.only(left: 10),
+          ),
+        ),
+        actions: [
+          IconButton(
+            onPressed: () {},
+            icon: const Icon(Icons.ios_share, color: Color(0xFFFFCC00)),
+          ),
+          // BOUTON OK (Sauvegarder)
+          TextButton(
+            onPressed: _sauvegarderEtQuitter,
+            child: const Text(
+              "OK",
+              style: TextStyle(
+                color: Color(0xFFFFCC00),
+                fontWeight: FontWeight.bold,
+                fontSize: 17,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
+      body: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20.0),
         child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text('You have pushed the button this many times:'),
+          children: [
+            TextField(
+              controller: _titreCtrl,
+              style: TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
+                color: couleurTexte,
+              ),
+              decoration: const InputDecoration(
+                border: InputBorder.none,
+                hintText: 'Titre',
+              ),
+              maxLines: null,
+            ),
             Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+              "${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year} à ${DateTime.now().hour}:${DateTime.now().minute}",
+              style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+            ),
+            const SizedBox(height: 10),
+            Expanded(
+              child: TextField(
+                controller: _contenuCtrl,
+                style: TextStyle(
+                  fontSize: 17,
+                  color: couleurTexte,
+                  height: 1.5,
+                ),
+                maxLines: null,
+                keyboardType: TextInputType.multiline,
+                decoration: const InputDecoration(
+                  border: InputBorder.none,
+                  hintText: 'Tapez ici...',
+                ),
+              ),
             ),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
 }
