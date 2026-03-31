@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+
 import '../models/note.dart';
+import '../theme/app_colors.dart';
 
 class EcranDetail extends StatefulWidget {
   final Note note;
@@ -44,8 +46,9 @@ class _EcranDetailState extends State<EcranDetail> {
 
   @override
   Widget build(BuildContext context) {
-    final couleurFond = widget.isDark ? Colors.black : Colors.white;
+    final couleurFond = widget.isDark ? AppColors.fondSombre : Colors.white;
     final couleurTexte = widget.isDark ? Colors.white : Colors.black;
+    final dateAffichee = widget.note.date;
 
     return Scaffold(
       backgroundColor: couleurFond,
@@ -57,11 +60,11 @@ class _EcranDetailState extends State<EcranDetail> {
           icon: const Icon(
             Icons.arrow_back_ios,
             size: 20,
-            color: Color(0xFFFFCC00),
+            color: AppColors.jauneNotes,
           ),
           label: const Text(
-            "Notes",
-            style: TextStyle(color: Color(0xFFFFCC00), fontSize: 17),
+            'Notes',
+            style: TextStyle(color: AppColors.jauneNotes, fontSize: 17),
           ),
           style: TextButton.styleFrom(
             alignment: Alignment.centerLeft,
@@ -71,14 +74,14 @@ class _EcranDetailState extends State<EcranDetail> {
         actions: [
           IconButton(
             onPressed: () {},
-            icon: const Icon(Icons.ios_share, color: Color(0xFFFFCC00)),
+            icon: const Icon(Icons.ios_share, color: AppColors.jauneNotes),
           ),
           TextButton(
             onPressed: _sauvegarderEtQuitter,
             child: const Text(
-              "OK",
+              'OK',
               style: TextStyle(
-                color: Color(0xFFFFCC00),
+                color: AppColors.jauneNotes,
                 fontWeight: FontWeight.bold,
                 fontSize: 17,
               ),
@@ -105,7 +108,7 @@ class _EcranDetailState extends State<EcranDetail> {
               maxLines: null,
             ),
             Text(
-              "${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year} à ${DateTime.now().hour}:${DateTime.now().minute}",
+              '${dateAffichee.day}/${dateAffichee.month}/${dateAffichee.year} à ${dateAffichee.hour}:${dateAffichee.minute.toString().padLeft(2, '0')}',
               style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
             ),
             const SizedBox(height: 10),

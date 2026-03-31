@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+
+import '../models/dossier.dart';
+import '../repositories/note_repository.dart';
+import '../theme/app_colors.dart';
+import '../widgets/dossier_tile.dart';
 import 'ecran_principal.dart';
 
-class EcranDossiers extends StatelessWidget {
+class EcranDossiers extends StatefulWidget {
   final VoidCallback toggleTheme;
   final bool isDark;
 
@@ -12,9 +17,45 @@ class EcranDossiers extends StatelessWidget {
   });
 
   @override
+  State<EcranDossiers> createState() => _EcranDossiersState();
+}
+
+class _EcranDossiersState extends State<EcranDossiers> {
+  final NoteRepository _repository = NoteRepository();
+  int _nombreNotes = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _chargerNombreNotes();
+  }
+
+  Future<void> _chargerNombreNotes() async {
+    try {
+      final notes = await _repository.recupererNotes();
+      if (!mounted) return;
+      setState(() {
+        _nombreNotes = notes.length;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _nombreNotes = 0;
+      });
+    }
+  }
+
+  List<Dossier> _buildDossiers() {
+    return [
+      Dossier(id: 'notes', name: 'Notes', noteCount: _nombreNotes),
+      const Dossier(id: 'supprimees', name: 'Supprimés récemment'),
+    ];
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final couleurTexte = isDark ? Colors.white : Colors.black;
-    final couleurFondElement = isDark ? const Color(0xFF1C1C1E) : Colors.white;
+    final couleurTexte = widget.isDark ? Colors.white : Colors.black;
+    final dossiers = _buildDossiers();
 
     return Scaffold(
       appBar: AppBar(
@@ -22,9 +63,9 @@ class EcranDossiers extends StatelessWidget {
           TextButton(
             onPressed: () {},
             child: const Text(
-              "Modifier",
+              'Modifier',
               style: TextStyle(
-                color: Color(0xFFFFCC00),
+                color: AppColors.jauneNotes,
                 fontWeight: FontWeight.bold,
                 fontSize: 17,
               ),
@@ -39,7 +80,7 @@ class EcranDossiers extends StatelessWidget {
           children: [
             const SizedBox(height: 10),
             Text(
-              "Dossiers",
+              'Dossiers',
               style: TextStyle(
                 fontSize: 34,
                 fontWeight: FontWeight.bold,
@@ -47,71 +88,35 @@ class EcranDossiers extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 20),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: Container(
-                color: couleurFondElement,
-                child: ListTile(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => EcranPrincipal(
-                          toggleTheme: toggleTheme,
-                          isDark: isDark,
-                        ),
-                      ),
-                    );
-                  },
-                  leading: const Icon(
-                    Icons.folder,
-                    color: Color(0xFFFFCC00),
-                    size: 30,
-                  ),
-                  title: Text(
-                    "Notes",
-                    style: TextStyle(
-                      color: couleurTexte,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.arrow_forward_ios,
-                        color: Colors.grey.shade400,
-                        size: 16,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: Container(
-                color: couleurFondElement,
-                child: ListTile(
-                  leading: const Icon(
-                    Icons.delete_outline,
-                    color: Color(0xFFFFCC00),
-                    size: 30,
-                  ),
-                  title: Text(
-                    "Supprimés récemment",
-                    style: TextStyle(
-                      color: couleurTexte,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  trailing: Icon(
-                    Icons.arrow_forward_ios,
-                    color: Colors.grey.shade400,
-                    size: 16,
-                  ),
-                ),
+            Expanded(
+              child: ListView.separated(
+                itemCount: dossiers.length,
+                separatorBuilder: (_, _) => const SizedBox(height: 20),
+                itemBuilder: (context, index) {
+                  final dossier = dossiers[index];
+                  return DossierTile(
+                    dossier: dossier,
+                    isDark: widget.isDark,
+                    icone: dossier.id == 'notes'
+                        ? Icons.folder
+                        : Icons.delete_outline,
+                    estInteractif: dossier.id == 'notes',
+                    onTap: dossier.id == 'notes'
+                        ? () async {
+                            await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => EcranPrincipal(
+                                  toggleTheme: widget.toggleTheme,
+                                  isDark: widget.isDark,
+                                ),
+                              ),
+                            );
+                            await _chargerNombreNotes();
+                          }
+                        : null,
+                  );
+                },
               ),
             ),
           ],
@@ -120,18 +125,18 @@ class EcranDossiers extends StatelessWidget {
       bottomNavigationBar: Container(
         height: 50,
         padding: const EdgeInsets.symmetric(horizontal: 20),
-        color: isDark ? const Color(0xFF1C1C1E) : const Color(0xFFF2F2F7),
+        color: widget.isDark ? AppColors.carteSombre : AppColors.fondClair,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             IconButton(
               icon: Icon(
-                isDark ? Icons.light_mode : Icons.dark_mode_outlined,
-                color: const Color(0xFFFFCC00),
+                widget.isDark ? Icons.light_mode : Icons.dark_mode_outlined,
+                color: AppColors.jauneNotes,
               ),
-              onPressed: toggleTheme,
+              onPressed: widget.toggleTheme,
             ),
-            const Icon(Icons.folder_open, color: Color(0xFFFFCC00)),
+            const Icon(Icons.folder_open, color: AppColors.jauneNotes),
           ],
         ),
       ),

@@ -1,7 +1,12 @@
 import 'dart:math';
+
 import 'package:flutter/material.dart';
+
 import '../models/note.dart';
-import '../services/note_service.dart';
+import '../repositories/note_repository.dart';
+import '../theme/app_colors.dart';
+import '../widgets/barre_recherche_notes.dart';
+import '../widgets/note_list_tile.dart';
 import 'ecran_detail.dart';
 
 class EcranPrincipal extends StatefulWidget {
@@ -19,7 +24,7 @@ class EcranPrincipal extends StatefulWidget {
 }
 
 class _EcranPrincipalState extends State<EcranPrincipal> {
-  final NoteService _service = NoteService();
+  final NoteRepository _repository = NoteRepository();
   List<Note> _notesLocales = [];
   List<Note> _notesFiltrees = [];
   bool _chargement = true;
@@ -35,13 +40,15 @@ class _EcranPrincipalState extends State<EcranPrincipal> {
 
   void _initialiserDonnees() async {
     try {
-      final notes = await _service.recupererNotes();
+      final notes = await _repository.recupererNotes();
+      if (!mounted) return;
       setState(() {
         _notesLocales = notes;
         _notesFiltrees = List.from(notes);
         _chargement = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _erreur = true;
         _chargement = false;
@@ -62,7 +69,7 @@ class _EcranPrincipalState extends State<EcranPrincipal> {
   void _ouvrirEditeur({Note? noteExistant}) async {
     final noteEnCours =
         noteExistant ??
-        Note(id: Random().nextInt(100000) + 1000, titre: "", contenu: "");
+        Note(id: Random().nextInt(100000) + 1000, title: '', content: '');
     final aSauvegarde = await Navigator.push(
       context,
       MaterialPageRoute(
@@ -74,6 +81,7 @@ class _EcranPrincipalState extends State<EcranPrincipal> {
       ),
     );
 
+    if (!mounted) return;
     if (aSauvegarde == true) {
       setState(() {
         if (noteExistant == null) {
@@ -94,9 +102,9 @@ class _EcranPrincipalState extends State<EcranPrincipal> {
     ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text("Note supprimée"),
+        content: const Text('Note supprimée'),
         action: SnackBarAction(
-          label: "Annuler",
+          label: 'Annuler',
           onPressed: () {
             setState(() {
               if (indexBackup >= 0) {
@@ -113,14 +121,19 @@ class _EcranPrincipalState extends State<EcranPrincipal> {
   }
 
   @override
+  void dispose() {
+    _rechercheCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final couleurTexte = widget.isDark ? Colors.white : Colors.black;
     final couleurFondListe = widget.isDark
-        ? const Color(0xFF1C1C1E)
+        ? AppColors.carteSombre
         : Colors.white;
-    final couleurRecherche = widget.isDark
-        ? const Color(0xFF1C1C1E)
-        : const Color(0xFFE3E3E8);
+    final aucuneNote = _notesLocales.isEmpty;
+    final aucunResultat = _notesFiltrees.isEmpty;
 
     return Scaffold(
       appBar: AppBar(
@@ -135,12 +148,12 @@ class _EcranPrincipalState extends State<EcranPrincipal> {
               Icon(
                 Icons.arrow_back_ios_new,
                 size: 22,
-                color: Color(0xFFFFCC00),
+                color: AppColors.jauneNotes,
               ),
               SizedBox(width: 5),
               Text(
-                "Dossiers",
-                style: TextStyle(fontSize: 17, color: Color(0xFFFFCC00)),
+                'Dossiers',
+                style: TextStyle(fontSize: 17, color: AppColors.jauneNotes),
               ),
             ],
           ),
@@ -149,7 +162,7 @@ class _EcranPrincipalState extends State<EcranPrincipal> {
           IconButton(
             icon: const Icon(
               Icons.more_horiz_rounded,
-              color: Color(0xFFFFCC00),
+              color: AppColors.jauneNotes,
             ),
             onPressed: () {},
           ),
@@ -162,7 +175,7 @@ class _EcranPrincipalState extends State<EcranPrincipal> {
           ? Center(
               child: TextButton(
                 onPressed: _initialiserDonnees,
-                child: const Text("Réessayer"),
+                child: const Text('Réessayer'),
               ),
             )
           : Column(
@@ -176,7 +189,7 @@ class _EcranPrincipalState extends State<EcranPrincipal> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        "Notes",
+                        'Notes',
                         style: TextStyle(
                           fontSize: 34,
                           fontWeight: FontWeight.bold,
@@ -184,23 +197,10 @@ class _EcranPrincipalState extends State<EcranPrincipal> {
                         ),
                       ),
                       const SizedBox(height: 10),
-                      Container(
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: couleurRecherche,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: TextField(
-                          controller: _rechercheCtrl,
-                          decoration: const InputDecoration(
-                            prefixIcon: Icon(Icons.search, color: Colors.grey),
-                            hintText: "Rechercher",
-                            hintStyle: TextStyle(color: Colors.grey),
-                            border: InputBorder.none,
-                            contentPadding: EdgeInsets.symmetric(vertical: 8),
-                          ),
-                          style: TextStyle(color: couleurTexte),
-                        ),
+                      BarreRechercheNotes(
+                        controller: _rechercheCtrl,
+                        isDark: widget.isDark,
+                        couleurTexte: couleurTexte,
                       ),
                     ],
                   ),
@@ -213,64 +213,82 @@ class _EcranPrincipalState extends State<EcranPrincipal> {
                       borderRadius: BorderRadius.circular(10),
                       child: Container(
                         color: couleurFondListe,
-                        child: ListView.separated(
-                          padding: EdgeInsets.zero,
-                          physics: const BouncingScrollPhysics(),
-                          itemCount: _notesFiltrees.length,
-                          separatorBuilder: (c, i) => Divider(
-                            height: 1,
-                            indent: 16,
-                            color: Colors.grey.withOpacity(0.3),
-                          ),
-                          itemBuilder: (context, index) {
-                            final note = _notesFiltrees[index];
-                            return Dismissible(
-                              key: Key(note.id.toString()),
-                              direction: DismissDirection.endToStart,
-                              background: Container(
-                                color: Colors.red,
-                                alignment: Alignment.centerRight,
-                                padding: const EdgeInsets.only(right: 20),
-                                child: const Icon(
-                                  Icons.delete,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              onDismissed: (_) => _supprimerNote(note),
-                              child: ListTile(
-                                onTap: () => _ouvrirEditeur(noteExistant: note),
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 8,
-                                ),
-                                title: Text(
-                                  note.titre.isEmpty
-                                      ? "Nouvelle note"
-                                      : note.titre,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                    color: couleurTexte,
+                        child: aucunResultat
+                            ? Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 24,
+                                  ),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        aucuneNote
+                                            ? Icons.note_alt_outlined
+                                            : Icons.search_off,
+                                        color: Colors.grey.shade500,
+                                        size: 42,
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Text(
+                                        aucuneNote
+                                            ? 'Aucune note pour le moment'
+                                            : 'Aucun resultat pour cette recherche',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          color: couleurTexte,
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        aucuneNote
+                                            ? 'Appuie sur le bouton en bas a droite pour creer ta premiere note.'
+                                            : 'Essaie avec un autre mot-clé.',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          color: Colors.grey.shade500,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                                subtitle: Padding(
-                                  padding: const EdgeInsets.only(top: 4.0),
-                                  child: Text(
-                                    "${note.date.hour}:${note.date.minute.toString().padLeft(2, '0')}  ${note.contenu.replaceAll('\n', ' ')}",
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      color: Colors.grey.shade600,
-                                      fontSize: 15,
+                              )
+                            : ListView.separated(
+                                padding: EdgeInsets.zero,
+                                physics: const BouncingScrollPhysics(),
+                                itemCount: _notesFiltrees.length,
+                                separatorBuilder: (c, i) => Divider(
+                                  height: 1,
+                                  indent: 16,
+                                  color: Colors.grey.withOpacity(0.3),
+                                ),
+                                itemBuilder: (context, index) {
+                                  final note = _notesFiltrees[index];
+                                  return Dismissible(
+                                    key: Key(note.id.toString()),
+                                    direction: DismissDirection.endToStart,
+                                    background: Container(
+                                      color: Colors.red,
+                                      alignment: Alignment.centerRight,
+                                      padding: const EdgeInsets.only(right: 20),
+                                      child: const Icon(
+                                        Icons.delete,
+                                        color: Colors.white,
+                                      ),
                                     ),
-                                  ),
-                                ),
+                                    onDismissed: (_) => _supprimerNote(note),
+                                    child: NoteListTile(
+                                      note: note,
+                                      couleurTexte: couleurTexte,
+                                      onTap: () =>
+                                          _ouvrirEditeur(noteExistant: note),
+                                    ),
+                                  );
+                                },
                               ),
-                            );
-                          },
-                        ),
                       ),
                     ),
                   ),
@@ -279,8 +297,8 @@ class _EcranPrincipalState extends State<EcranPrincipal> {
                   height: 60,
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   color: widget.isDark
-                      ? const Color(0xFF1C1C1E)
-                      : const Color(0xFFF2F2F7),
+                      ? AppColors.carteSombre
+                      : AppColors.fondClair,
                   child: SafeArea(
                     top: false,
                     child: Row(
@@ -288,13 +306,13 @@ class _EcranPrincipalState extends State<EcranPrincipal> {
                       children: [
                         const SizedBox(width: 24),
                         Text(
-                          "${_notesLocales.length} Notes",
+                          '${_notesLocales.length} Notes',
                           style: TextStyle(fontSize: 12, color: couleurTexte),
                         ),
                         IconButton(
                           icon: const Icon(
                             Icons.edit_square,
-                            color: Color(0xFFFFCC00),
+                            color: AppColors.jauneNotes,
                             size: 28,
                           ),
                           onPressed: () => _ouvrirEditeur(),
