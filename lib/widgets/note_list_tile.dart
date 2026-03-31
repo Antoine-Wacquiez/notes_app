@@ -32,7 +32,7 @@ class NoteListTile extends StatelessWidget {
       subtitle: Padding(
         padding: const EdgeInsets.only(top: 4.0),
         child: Text(
-          "${note.date.hour}:${note.date.minute.toString().padLeft(2, '0')}  ${note.contenu.replaceAll('\n', ' ')}",
+          "${note.date.hour.toString().padLeft(2, '0')}:${note.date.minute.toString().padLeft(2, '0')}  ${note.contenu.replaceAll('\n', ' ')}",
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(color: Colors.grey.shade600, fontSize: 15),

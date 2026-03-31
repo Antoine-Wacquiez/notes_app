@@ -58,21 +58,7 @@ class _EcranDossiersState extends State<EcranDossiers> {
     final dossiers = _buildDossiers();
 
     return Scaffold(
-      appBar: AppBar(
-        actions: [
-          TextButton(
-            onPressed: () {},
-            child: const Text(
-              'Modifier',
-              style: TextStyle(
-                color: AppColors.jauneNotes,
-                fontWeight: FontWeight.bold,
-                fontSize: 17,
-              ),
-            ),
-          ),
-        ],
-      ),
+      appBar: AppBar(),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20),
         child: Column(

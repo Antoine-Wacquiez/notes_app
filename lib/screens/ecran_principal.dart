@@ -139,7 +139,7 @@ class _EcranPrincipalState extends State<EcranPrincipal> {
       appBar: AppBar(
         titleSpacing: 0,
         centerTitle: false,
-        leadingWidth: 100,
+        leadingWidth: 110,
         leading: GestureDetector(
           onTap: () => Navigator.pop(context),
           child: Row(
@@ -151,9 +151,12 @@ class _EcranPrincipalState extends State<EcranPrincipal> {
                 color: AppColors.jauneNotes,
               ),
               SizedBox(width: 5),
-              Text(
-                'Dossiers',
-                style: TextStyle(fontSize: 17, color: AppColors.jauneNotes),
+              Flexible(
+                child: Text(
+                  'Dossiers',
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 17, color: AppColors.jauneNotes),
+                ),
               ),
             ],
           ),

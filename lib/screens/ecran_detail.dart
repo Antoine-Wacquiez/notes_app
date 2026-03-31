@@ -73,8 +73,12 @@ class _EcranDetailState extends State<EcranDetail> {
         ),
         actions: [
           IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.ios_share, color: AppColors.jauneNotes),
+            onPressed: null,
+            tooltip: 'Partage bientôt disponible',
+            icon: Icon(
+              Icons.ios_share,
+              color: AppColors.jauneNotes.withOpacity(0.45),
+            ),
           ),
           TextButton(
             onPressed: _sauvegarderEtQuitter,
@@ -108,7 +112,7 @@ class _EcranDetailState extends State<EcranDetail> {
               maxLines: null,
             ),
             Text(
-              '${dateAffichee.day}/${dateAffichee.month}/${dateAffichee.year} à ${dateAffichee.hour}:${dateAffichee.minute.toString().padLeft(2, '0')}',
+              '${dateAffichee.day}/${dateAffichee.month}/${dateAffichee.year} à ${dateAffichee.hour.toString().padLeft(2, '0')}:${dateAffichee.minute.toString().padLeft(2, '0')}',
               style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
             ),
             const SizedBox(height: 10),
