@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../models/note.dart';
+import '../services/citation_service.dart';
 import '../theme/app_colors.dart';
+import '../utils/app_feedback.dart';
+import '../utils/user_messages.dart';
 
 class EcranDetail extends StatefulWidget {
   final Note note;
@@ -20,8 +23,10 @@ class EcranDetail extends StatefulWidget {
 }
 
 class _EcranDetailState extends State<EcranDetail> {
+  final CitationService _citationService = CitationService();
   late TextEditingController _titreCtrl;
   late TextEditingController _contenuCtrl;
+  bool _chargementCitation = false;
 
   @override
   void initState() {
@@ -31,10 +36,39 @@ class _EcranDetailState extends State<EcranDetail> {
   }
 
   void _sauvegarderEtQuitter() {
+    final titre = _titreCtrl.text.trim();
+    final contenu = _contenuCtrl.text.trim();
+    if (titre.isEmpty && contenu.isEmpty) {
+      AppFeedback.showInfo(context, UserMessages.noteVide);
+      return;
+    }
     widget.note.titre = _titreCtrl.text;
     widget.note.contenu = _contenuCtrl.text;
     widget.note.date = DateTime.now();
     Navigator.pop(context, true);
+  }
+
+  Future<void> _ajouterCitation() async {
+    setState(() => _chargementCitation = true);
+    try {
+      final citation = await _citationService.recupererAleatoire();
+      if (!mounted) return;
+      final insertion = citation.asTextePourNote();
+      final current = _contenuCtrl.text;
+      _contenuCtrl.text = current.isEmpty
+          ? insertion
+          : '$current\n\n$insertion';
+      _contenuCtrl.selection = TextSelection.collapsed(
+        offset: _contenuCtrl.text.length,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      AppFeedback.showError(context, UserMessages.depuisErreur(e));
+    } finally {
+      if (mounted) {
+        setState(() => _chargementCitation = false);
+      }
+    }
   }
 
   @override
@@ -77,7 +111,7 @@ class _EcranDetailState extends State<EcranDetail> {
             tooltip: 'Partage bientôt disponible',
             icon: Icon(
               Icons.ios_share,
-              color: AppColors.jauneNotes.withOpacity(0.45),
+              color: AppColors.jauneNotes.withValues(alpha: 0.45),
             ),
           ),
           TextButton(
@@ -109,13 +143,46 @@ class _EcranDetailState extends State<EcranDetail> {
                 border: InputBorder.none,
                 hintText: 'Titre',
               ),
-              maxLines: null,
+              minLines: 1,
+              maxLines: 3,
+              textInputAction: TextInputAction.next,
             ),
             Text(
               '${dateAffichee.day}/${dateAffichee.month}/${dateAffichee.year} à ${dateAffichee.hour.toString().padLeft(2, '0')}:${dateAffichee.minute.toString().padLeft(2, '0')}',
               style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: _chargementCitation ? null : _ajouterCitation,
+                icon: _chargementCitation
+                    ? SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppColors.jauneNotes,
+                        ),
+                      )
+                    : const Icon(
+                        Icons.format_quote_rounded,
+                        color: AppColors.jauneNotes,
+                        size: 22,
+                      ),
+                label: Text(
+                  'Ajouter une citation',
+                  style: TextStyle(
+                    color: AppColors.jauneNotes.withValues(
+                      alpha: _chargementCitation ? 0.5 : 1,
+                    ),
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 6),
             Expanded(
               child: TextField(
                 controller: _contenuCtrl,

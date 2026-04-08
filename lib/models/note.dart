@@ -14,8 +14,10 @@ class Note {
   }) : updatedAt = updatedAt ?? DateTime.now();
 
   factory Note.fromJson(Map<String, dynamic> json) {
+    final idRaw = json['id'];
+    final id = idRaw is int ? idRaw : (idRaw as num).toInt();
     return Note(
-      id: json['id'] as int,
+      id: id,
       title: (json['title'] ?? json['titre'] ?? 'Sans titre') as String,
       content: (json['content'] ?? json['body'] ?? json['contenu'] ?? '') as String,
       updatedAt: _parseDate(json['updatedAt'] ?? json['date']),
