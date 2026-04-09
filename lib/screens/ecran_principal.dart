@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import '../models/note.dart';
 import '../repositories/note_repository.dart';
 import '../theme/app_colors.dart';
+import '../utils/app_feedback.dart';
+import '../utils/user_messages.dart';
 import '../widgets/barre_recherche_notes.dart';
 import '../widgets/note_list_tile.dart';
 import 'ecran_detail.dart';
@@ -29,6 +31,7 @@ class _EcranPrincipalState extends State<EcranPrincipal> {
   List<Note> _notesFiltrees = [];
   bool _chargement = true;
   bool _erreur = false;
+  String? _messageErreur;
   final TextEditingController _rechercheCtrl = TextEditingController();
 
   @override
@@ -38,7 +41,7 @@ class _EcranPrincipalState extends State<EcranPrincipal> {
     _rechercheCtrl.addListener(_filtrerNotes);
   }
 
-  void _initialiserDonnees() async {
+  Future<void> _initialiserDonnees() async {
     try {
       final notes = await _repository.recupererNotes();
       if (!mounted) return;
@@ -46,27 +49,41 @@ class _EcranPrincipalState extends State<EcranPrincipal> {
         _notesLocales = notes;
         _notesFiltrees = List.from(notes);
         _chargement = false;
+        _erreur = false;
+        _messageErreur = null;
       });
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _erreur = true;
         _chargement = false;
+        _messageErreur = UserMessages.depuisErreur(e);
       });
     }
   }
 
+  Future<void> _persisterNotes() async {
+    try {
+      await _repository.saveNotes(_notesLocales);
+    } catch (e) {
+      if (!mounted) return;
+      AppFeedback.showError(
+        context,
+        UserMessages.depuisErreur(e),
+      );
+    }
+  }
+
   void _filtrerNotes() {
-    final query = _rechercheCtrl.text.toLowerCase();
     setState(() {
-      _notesFiltrees = _notesLocales.where((note) {
-        return note.titre.toLowerCase().contains(query) ||
-            note.contenu.toLowerCase().contains(query);
-      }).toList();
+      _notesFiltrees = _repository.filtrerParRecherche(
+        _notesLocales,
+        _rechercheCtrl.text,
+      );
     });
   }
 
-  void _ouvrirEditeur({Note? noteExistant}) async {
+  Future<void> _ouvrirEditeur({Note? noteExistant}) async {
     final noteEnCours =
         noteExistant ??
         Note(id: Random().nextInt(100000) + 1000, title: '', content: '');
@@ -89,6 +106,7 @@ class _EcranPrincipalState extends State<EcranPrincipal> {
         }
         _filtrerNotes();
       });
+      await _persisterNotes();
     }
   }
 
@@ -98,6 +116,7 @@ class _EcranPrincipalState extends State<EcranPrincipal> {
       _notesLocales.removeWhere((n) => n.id == note.id);
       _filtrerNotes();
     });
+    _persisterNotes();
 
     ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
@@ -114,6 +133,7 @@ class _EcranPrincipalState extends State<EcranPrincipal> {
               }
               _filtrerNotes();
             });
+            _persisterNotes();
           },
         ),
       ),
@@ -163,11 +183,17 @@ class _EcranPrincipalState extends State<EcranPrincipal> {
         ),
         actions: [
           IconButton(
+            tooltip: 'Plus d’options',
             icon: const Icon(
               Icons.more_horiz_rounded,
               color: AppColors.jauneNotes,
             ),
-            onPressed: () {},
+            onPressed: () {
+              AppFeedback.showInfo(
+                context,
+                UserMessages.bientotDisponible,
+              );
+            },
           ),
           const SizedBox(width: 8),
         ],
@@ -176,9 +202,34 @@ class _EcranPrincipalState extends State<EcranPrincipal> {
           ? const Center(child: CircularProgressIndicator.adaptive())
           : _erreur
           ? Center(
-              child: TextButton(
-                onPressed: _initialiserDonnees,
-                child: const Text('Réessayer'),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      size: 48,
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      _messageErreur ?? UserMessages.erreurChargementNotes,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: couleurTexte,
+                        fontSize: 16,
+                        height: 1.35,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    FilledButton.icon(
+                      onPressed: _initialiserDonnees,
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Réessayer'),
+                    ),
+                  ],
+                ),
               ),
             )
           : Column(
@@ -236,7 +287,7 @@ class _EcranPrincipalState extends State<EcranPrincipal> {
                                       Text(
                                         aucuneNote
                                             ? 'Aucune note pour le moment'
-                                            : 'Aucun resultat pour cette recherche',
+                                            : 'Aucun résultat pour cette recherche',
                                         textAlign: TextAlign.center,
                                         style: TextStyle(
                                           color: couleurTexte,
@@ -247,7 +298,7 @@ class _EcranPrincipalState extends State<EcranPrincipal> {
                                       const SizedBox(height: 6),
                                       Text(
                                         aucuneNote
-                                            ? 'Appuie sur le bouton en bas a droite pour creer ta premiere note.'
+                                            ? 'Appuie sur le bouton en bas à droite pour créer ta première note.'
                                             : 'Essaie avec un autre mot-clé.',
                                         textAlign: TextAlign.center,
                                         style: TextStyle(
@@ -266,7 +317,7 @@ class _EcranPrincipalState extends State<EcranPrincipal> {
                                 separatorBuilder: (c, i) => Divider(
                                   height: 1,
                                   indent: 16,
-                                  color: Colors.grey.withOpacity(0.3),
+                                  color: Colors.grey.withValues(alpha: 0.3),
                                 ),
                                 itemBuilder: (context, index) {
                                   final note = _notesFiltrees[index];

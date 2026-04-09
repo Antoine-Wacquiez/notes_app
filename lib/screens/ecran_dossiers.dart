@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/dossier.dart';
 import '../repositories/note_repository.dart';
 import '../theme/app_colors.dart';
+import '../utils/user_messages.dart';
 import '../widgets/dossier_tile.dart';
 import 'ecran_principal.dart';
 
@@ -23,6 +24,7 @@ class EcranDossiers extends StatefulWidget {
 class _EcranDossiersState extends State<EcranDossiers> {
   final NoteRepository _repository = NoteRepository();
   int _nombreNotes = 0;
+  bool _erreurChargement = false;
 
   @override
   void initState() {
@@ -36,11 +38,13 @@ class _EcranDossiersState extends State<EcranDossiers> {
       if (!mounted) return;
       setState(() {
         _nombreNotes = notes.length;
+        _erreurChargement = false;
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _nombreNotes = 0;
+        _erreurChargement = true;
       });
     }
   }
@@ -74,6 +78,17 @@ class _EcranDossiersState extends State<EcranDossiers> {
               ),
             ),
             const SizedBox(height: 20),
+            if (_erreurChargement)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Text(
+                  UserMessages.erreurComptageNotes,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.error,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
             Expanded(
               child: ListView.separated(
                 itemCount: dossiers.length,
