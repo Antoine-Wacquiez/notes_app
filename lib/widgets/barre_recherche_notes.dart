@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 
-/// Barre de recherche pour la liste des notes (filtrage géré par l’écran / repository).
 class BarreRechercheNotes extends StatefulWidget {
   final TextEditingController controller;
   final bool isDark;

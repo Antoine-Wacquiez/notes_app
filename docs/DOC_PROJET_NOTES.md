@@ -20,33 +20,77 @@ Construire une application mobile Flutter permettant de :
 Le projet doit aussi respecter les criteres du devoir : structure propre, gestion d'erreurs, tests unitaires, connexion a une API externe et application prete au deploiement.
 La logique de donnees sera geree directement dans l'application avec du stockage local ou des donnees mockees selon le besoin.
 
+---
+
+## Etat actuel du projet (ce qui est vraiment implemente)
+
+Cette section decrit **l’implementation reelle** telle qu’elle existe dans le code du projet.
+
+### Fonctionnalites principales
+
+- **Dossiers** : creation, renommage, recherche, comptage des notes par dossier
+  - UI : `lib/screens/ecran_dossiers.dart`
+  - Donnees : `lib/models/dossier.dart`
+  - Acces / logique : `lib/repositories/folder_repository.dart`
+  - Stockage : `lib/services/folder_local_storage.dart`
+- **Notes** : creation, edition, suppression (swipe), suppression multiple (mode selection), recherche
+  - UI liste : `lib/screens/ecran_principal.dart`
+  - UI edition : `lib/screens/ecran_detail.dart`
+  - Widget ligne : `lib/widgets/note_list_tile.dart`
+  - Donnees : `lib/models/note.dart`
+  - Acces / logique : `lib/repositories/note_repository.dart`
+  - Stockage : `lib/services/note_local_storage.dart`
+- **Tri & affichage des dates** :
+  - tri par **date de creation** (par defaut), par **date de modification**, ou par **titre**
+  - regroupement par **mois** quand le tri est une date (en-tetes plus gros + gras)
+  - “Aujourd’hui” si la note est du jour (liste + detail)
+  - UI : `lib/screens/ecran_principal.dart`
+  - format date : `lib/utils/note_date_format.dart`
+- **Checklist (taches dans une note)** :
+  - modele : `lib/models/note_check_item.dart`
+  - edition + sauvegarde : `lib/screens/ecran_detail.dart`
+- **API externe (citations)** :
+  - service : `lib/services/citation_service.dart` (DummyJSON, compatible Web/CORS)
+  - integration UI : `lib/screens/ecran_detail.dart`
+  - modele : `lib/models/citation.dart`
+- **Persistance locale** (SharedPreferences + JSON) :
+  - notes : `lib/services/note_local_storage.dart`
+  - dossiers : `lib/services/folder_local_storage.dart`
+  - exceptions : `lib/services/note_storage_exception.dart`
+  - donnees demo au premier lancement (option) : `lib/data/demo_notes.dart`
+
+### Tests existants
+
+- Recherche + persistance simulee via fake storage : `test/services/note_repository_test.dart`
+- Format date (inclut “Aujourd’hui” + titres de sections mois) : `test/utils/note_date_format_test.dart`
+- Autres tests selon le repo : dossier, widgets, etc. dans `test/`
+
+---
+
 ## Ce qu'on doit reproduire de Notes d'Apple
 
 ### Fonctionnalites minimum attendues
 
 1. **Ecran des dossiers**
-   - afficher plusieurs dossiers ou categories
-   - nombre de notes par dossier
-   - navigation vers la liste des notes
-
+  - afficher plusieurs dossiers ou categories
+  - nombre de notes par dossier
+  - navigation vers la liste des notes
 2. **Ecran liste des notes**
-   - afficher le titre
-   - afficher un extrait du contenu
-   - afficher la date de derniere modification
-   - possibilite de supprimer une note
-   - barre de recherche
-
+  - afficher le titre
+  - afficher un extrait du contenu
+  - afficher la date de derniere modification
+  - possibilite de supprimer une note
+  - barre de recherche
 3. **Ecran detail / edition**
-   - creer une nouvelle note
-   - modifier une note existante
-   - sauvegarde automatique ou via bouton
-   - titre + contenu
-
+  - creer une nouvelle note
+  - modifier une note existante
+  - sauvegarde automatique ou via bouton
+  - titre + contenu
 4. **UX proche d'Apple Notes**
-   - interface simple
-   - couleurs sobres
-   - typographie lisible
-   - animations ou transitions legeres si possible
+  - interface simple
+  - couleurs sobres
+  - typographie lisible
+  - animations ou transitions legeres si possible
 
 ## Perimetre conseille pour le devoir
 
@@ -54,7 +98,7 @@ Pour rester realiste et efficace, on peut viser un **MVP** puis ajouter des bonu
 
 ### MVP
 
-- gestion des dossiers
+- création dossier
 - CRUD des notes
 - stockage local
 - recherche
@@ -64,10 +108,6 @@ Pour rester realiste et efficace, on peut viser un **MVP** puis ajouter des bonu
 
 ### Bonus
 
-- i18n francais / anglais
-- pieces jointes ou images
-- verrouillage d'une note
-- favoris / notes epinglees
 - tri par date ou titre
 
 ## Proposition technique
@@ -117,6 +157,8 @@ Exemple de responsabilites :
 
 ## Comment repondre aux criteres du devoir
 
+Cette partie repond **directement** aux points de la diapo “CRITERE D’EVALUATION”.
+
 ### 1. Choix du projet valide
 
 Le projet est clair : refaire les bases de **Notes d'Apple** en Flutter avec une vraie logique produit.
@@ -165,6 +207,19 @@ Concretement :
 - afficher un message vide ou erreur dans les listes
 - entourer les appels critiques avec `try/catch`
 
+#### Mise en place dans le code
+
+- Messages utilisateurs centralises : `lib/utils/user_messages.dart`
+- Erreurs stockage local isolees : `lib/services/note_storage_exception.dart`
+- Stockage notes/dossiers avec `try/catch` et messages propres :
+  - `lib/services/note_local_storage.dart`
+  - `lib/services/folder_local_storage.dart`
+- Repositories qui exposent des `Exception` “propres” :
+  - `lib/repositories/note_repository.dart`
+  - `lib/repositories/folder_repository.dart`
+- UI qui affiche un ecran d’erreur + bouton “Reessayer” sur la liste de notes :
+  - `lib/screens/ecran_principal.dart`
+
 ### 4. Tests unitaires des services
 
 Tester surtout :
@@ -173,6 +228,13 @@ Tester surtout :
 - recherche de notes
 - recuperation des donnees depuis le stockage local
 - appel API externe avec succes / echec
+
+#### Mise en place dans le code
+
+- Tests repository notes (recherche + persistance via fake storage) :
+  - `test/services/note_repository_test.dart`
+- Tests format date (inclut “Aujourd’hui” + titres de mois) :
+  - `test/utils/note_date_format_test.dart`
 
 ### 5. Application prete au deploiement
 
@@ -185,6 +247,11 @@ Cela veut dire :
 - icone, nom d'app, splash si possible
 - mode release sans erreurs
 
+#### Note “pret au deploiement”
+
+- Le projet est structure et peut etre build en release (Android/iOS/Desktop/Web selon cible).
+- Pour Android release, la signature se configure via keystore (voir consignes de cours : `android/app/build.gradle(.kts)` + `key.properties`).
+
 ### 6. Code structure et clair
 
 Il faudra :
@@ -193,6 +260,41 @@ Il faudra :
 - eviter de tout mettre dans `main.dart`
 - donner des noms explicites aux classes et methodes
 - reutiliser des widgets
+
+#### Mise en place dans le code
+
+- Separation par dossiers : `models/`, `services/`, `repositories/`, `screens/`, `widgets/`, `utils/`
+- Widgets reutilisables :
+  - `lib/widgets/note_list_tile.dart`
+  - `lib/widgets/dossier_tile.dart`
+  - `lib/widgets/barre_recherche_notes.dart`
+
+### 7. Participation
+
+Ce point depend du contexte du cours (presence, rendu, participation orale). Le projet contient :
+
+- une fonctionnalite principale complete (notes + dossiers)
+- plusieurs bonus techniques (selection multiple, regroupement par mois, “Aujourd’hui”, API citations)
+
+---
+
+## Bonus (diapo)
+
+### Theme sombre/clair
+
+- **Implemente** (toggle dans l’UI des dossiers).
+- Point d’entree : `lib/screens/ecran_dossiers.dart` (bouton mode clair/sombre)
+- Les ecrans utilisent `isDark` pour adapter couleurs (ex. `EcranPrincipal`, `EcranDetail`).
+
+### i18n (plusieurs langues)
+
+- **Non implemente** a ce stade (l’app est en francais).
+- Si demande : on peut ajouter `flutter_localizations` + fichiers `arb`.
+
+### Firebase (secrets, monitoring, etc.)
+
+- **Non implemente** (projet 100% local).
+- Si demande : ajout de Crashlytics pour le monitoring + gestion des secrets via variables d’environnement / `--dart-define`.
 
 ## Plan de developpement conseille
 
@@ -262,3 +364,4 @@ Le plus important pour le devoir est d'avoir :
 - une API externe bien integree
 - des tests
 - une bonne presentation finale
+

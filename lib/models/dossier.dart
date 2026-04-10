@@ -12,8 +12,8 @@ class Dossier {
   factory Dossier.fromJson(Map<String, dynamic> json) {
     return Dossier(
       id: (json['id'] ?? '') as String,
-      name: (json['name'] ?? json['nom'] ?? '') as String,
-      noteCount: (json['noteCount'] ?? json['nombreNotes'] ?? 0) as int,
+      name: (json['name'] ?? '') as String,
+      noteCount: 0,
     );
   }
 

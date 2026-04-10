@@ -3,11 +3,10 @@ import 'package:notes_app/models/note.dart';
 import 'package:notes_app/repositories/note_repository.dart';
 import 'package:notes_app/services/note_local_storage.dart';
 
-/// Stockage en mémoire pour tester le dépôt sans I/O réel.
 class FakeNoteLocalStorage extends NoteLocalStorage {
   FakeNoteLocalStorage([List<Note>? initial])
       : _notes = List.from(initial ?? []),
-        super();
+        super(seedDemoWhenEmpty: false);
 
   List<Note> _notes;
 

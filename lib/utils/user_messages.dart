@@ -1,4 +1,3 @@
-/// Textes affichés à l’utilisateur (erreurs, validations).
 class UserMessages {
   UserMessages._();
 
@@ -9,7 +8,18 @@ class UserMessages {
       'Impossible d’enregistrer tes notes. Réessaie dans un instant.';
 
   static const String noteVide =
-      'Ajoute un titre ou du texte avant d’enregistrer.';
+      'Ajoute un titre, du texte, une tâche ou une pièce jointe avant d’enregistrer.';
+
+  static const String pieceJointeTropVolumineuse =
+      'Ce fichier est trop volumineux pour cet appareil ou le navigateur.';
+
+  static const String pieceJointeLectureImpossible =
+      'Impossible de lire ce fichier. Réessaie.';
+
+  static const String dossierNomVide = 'Donne un nom au dossier.';
+
+  static const String dossierSupprimeNotesDeplacees =
+      'Les notes de ce dossier ont été déplacées vers « Notes ».';
 
   static const String erreurReseau =
       'Pas de connexion ou serveur injoignable. Vérifie ta connexion.';
@@ -21,7 +31,6 @@ class UserMessages {
 
   static const String bientotDisponible = 'Bientôt disponible.';
 
-  /// Extrait un texte lisible depuis une [Exception] ou autre erreur.
   static String depuisErreur(Object e) {
     final s = e.toString();
     if (s.startsWith('Exception: ')) {

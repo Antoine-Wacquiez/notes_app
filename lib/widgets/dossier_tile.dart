@@ -9,6 +9,7 @@ class DossierTile extends StatelessWidget {
   final IconData icone;
   final bool estInteractif;
   final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
 
   const DossierTile({
     super.key,
@@ -17,6 +18,7 @@ class DossierTile extends StatelessWidget {
     required this.icone,
     this.estInteractif = true,
     this.onTap,
+    this.onLongPress,
   });
 
   @override
@@ -30,6 +32,7 @@ class DossierTile extends StatelessWidget {
         color: couleurFond,
         child: ListTile(
           onTap: estInteractif ? onTap : null,
+          onLongPress: estInteractif ? onLongPress : null,
           leading: Icon(icone, color: AppColors.jauneNotes, size: 30),
           title: Text(
             dossier.name,

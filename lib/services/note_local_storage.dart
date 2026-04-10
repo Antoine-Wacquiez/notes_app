@@ -3,12 +3,17 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../data/demo_notes.dart';
 import '../models/note.dart';
 import 'note_storage_exception.dart';
 
-/// Persistance des notes en JSON via [SharedPreferences].
 class NoteLocalStorage {
-  NoteLocalStorage({SharedPreferences? preferences}) : _prefs = preferences;
+  NoteLocalStorage({
+    SharedPreferences? preferences,
+    this.seedDemoWhenEmpty = false,
+  }) : _prefs = preferences;
+
+  final bool seedDemoWhenEmpty;
 
   static const _keyNotes = 'notes_app_v1_notes';
 
@@ -30,6 +35,11 @@ class NoteLocalStorage {
       final prefs = await _instance();
       final raw = prefs.getString(_keyNotes);
       if (raw == null || raw.isEmpty) {
+        if (seedDemoWhenEmpty) {
+          final demo = buildDemoNotes();
+          await save(demo);
+          return demo;
+        }
         return [];
       }
       final decoded = jsonDecode(raw);

@@ -8,9 +8,7 @@ import '../models/citation.dart';
 import '../utils/user_messages.dart';
 
 /// Récupère une citation via [DummyJSON](https://dummyjson.com/docs/quotes#quotes-random).
-///
-/// Utilisé à la place de Quotable : meilleure compatibilité **navigateur (CORS)** et
-/// moins d’échecs depuis Flutter Web, tout en restant accessible hors ligne réseau classique.
+
 class CitationService {
   CitationService({http.Client? httpClient}) : _client = httpClient ?? http.Client();
 
@@ -19,7 +17,6 @@ class CitationService {
   static const String _baseUrl = 'https://dummyjson.com/quotes/random';
   static const Duration _timeout = Duration(seconds: 12);
 
-  /// Une citation aléatoire. Lève une [Exception] avec un message utilisateur en cas d’échec.
   Future<Citation> recupererAleatoire() async {
     final uri = Uri.parse(_baseUrl);
     try {
@@ -34,7 +31,6 @@ class CitationService {
         throw Exception(UserMessages.erreurServeur);
       }
       final body = Map<String, dynamic>.from(decoded);
-      // DummyJSON : `quote` + `author` ; Quotable utilisait `content` + `author`.
       final texte = body['quote'] ?? body['content'];
       final auteur = body['author'];
       if (texte is! String || texte.trim().isEmpty) {

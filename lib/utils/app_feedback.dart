@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// Messages utilisateur cohérents (SnackBars, etc.).
 class AppFeedback {
   AppFeedback._();
 
